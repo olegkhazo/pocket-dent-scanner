@@ -15,6 +15,17 @@ enum LightPatternType {
   phaseShiftedVertical,
 }
 
+// Stores Color as ARGB int for JSON serialization.
+class _ColorConverter implements JsonConverter<Color, int> {
+  const _ColorConverter();
+
+  @override
+  Color fromJson(int json) => Color(json);
+
+  @override
+  int toJson(Color color) => color.toARGB32();
+}
+
 @freezed
 class LightPattern with _$LightPattern {
   const factory LightPattern({
@@ -23,8 +34,8 @@ class LightPattern with _$LightPattern {
     @Default(8) int stripeWidth,
     @Default(8) int stripeSpacing,
     @Default(1.0) double brightness,
-    @Default(Color(0xFFFFFFFF)) Color foregroundColor,
-    @Default(Color(0xFF000000)) Color backgroundColor,
+    @_ColorConverter() @Default(Color(0xFFFFFFFF)) Color foregroundColor,
+    @_ColorConverter() @Default(Color(0xFF000000)) Color backgroundColor,
     @Default(0.0) double movementSpeed,
     @Default(0.0) double phase,
     @Default(0.0) double orientation,

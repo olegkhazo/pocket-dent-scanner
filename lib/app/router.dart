@@ -1,6 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../features/home/home_screen.dart';
+import '../features/light_test/light_test_screen.dart';
 
 part 'router.g.dart';
 
@@ -12,7 +15,7 @@ GoRouter router(RouterRef ref) {
       GoRoute(
         path: '/',
         name: 'home',
-        builder: (context, state) => const Placeholder(), // features/home
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/scan/panel',
@@ -42,7 +45,7 @@ GoRouter router(RouterRef ref) {
       GoRoute(
         path: '/light-test',
         name: 'light-test',
-        builder: (context, state) => const Placeholder(),
+        builder: (context, state) => const LightTestScreen(),
       ),
       GoRoute(
         path: '/debug-lab',
