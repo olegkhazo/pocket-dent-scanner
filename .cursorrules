@@ -1,0 +1,1487 @@
+# .cursorrules.txt — Pocket Dent Scanner MVP
+
+## 1. PROJECT OVERVIEW
+
+You are building an MVP mobile application called **Pocket Dent Scanner**.
+
+The goal is to test whether a smartphone can be used as a portable PDR dent scanner without any external hardware.
+
+The key concept:
+
+- The smartphone **screen acts as a programmable PDR / structured-light source**.
+- The smartphone **front-facing camera records the reflection of the screen patterns on a painted car panel**.
+- The application analyzes distortion of reflected light lines/patterns.
+- The MVP attempts to identify probable dents and visualize them as a simple dent map.
+- The product is intended for PDR technicians, hail-damage technicians, body shops, inspectors, and estimators.
+
+The MVP is NOT intended to provide metrology-grade depth measurements.
+
+The first goal is to answer one technical question:
+
+> Can a phone screen + front camera detect visible PDR dents reliably enough to be useful?
+
+Do not overbuild the product before this hypothesis is validated.
+
+
+---
+
+# 2. PRODUCT PRINCIPLES
+
+Always follow these principles:
+
+1. **Local-first**
+   - No backend is required for MVP.
+   - All scans, frames, processing, and results should initially remain on-device.
+
+2. **Fast iteration**
+   - Prefer simple, testable CV approaches over complex AI models.
+   - Every algorithmic stage must be easy to visualize and debug.
+
+3. **Phone-only MVP**
+   - No external lamp.
+   - No external camera.
+   - No hardware accessory.
+   - Use only:
+     - phone display
+     - front camera
+     - IMU if useful
+
+4. **Structured-light-first**
+   - Do NOT try to detect dents from normal photos as the primary approach.
+   - The application controls the visual pattern displayed on the phone.
+   - The algorithm should exploit knowledge of the displayed pattern.
+
+5. **No fake precision**
+   - Do not claim exact dent depth.
+   - Do not show millimeter depth unless validated later.
+   - Use confidence/severity classes instead.
+
+6. **MVP usability**
+   - The technician should be able to:
+     1. select a panel
+     2. choose or auto-select a light pattern
+     3. scan
+     4. process
+     5. view likely dents
+     6. save result locally
+
+7. **Modular architecture**
+   - Camera, structured light, CV pipeline, persistence, and UI must be independent modules.
+   - We expect the CV algorithm to change many times.
+
+
+---
+
+# 3. TARGET PLATFORMS
+
+Primary:
+- iOS
+- Android
+
+Preferred framework:
+- **Flutter**
+
+Language:
+- Dart
+
+Native code only when necessary:
+- Swift for iOS
+- Kotlin for Android
+
+Computer vision:
+- OpenCV native bindings or native platform modules
+- Prefer performant native image processing over slow pure-Dart pixel loops
+
+Do NOT use a browser/WebView camera pipeline for the core scanner.
+
+Reason:
+The app needs:
+- continuous front-camera frames
+- deterministic rendering of structured-light patterns
+- access to device orientation / IMU
+- frame-by-frame CV
+- good performance
+- low latency
+
+Flutter is used for:
+- UI
+- navigation
+- scan workflow
+- pattern controls
+- scan history
+- visualization
+- settings
+
+Native layer is allowed for:
+- frame processing
+- OpenCV
+- camera configuration when Flutter APIs are insufficient
+
+
+---
+
+# 4. RECOMMENDED TECHNOLOGY STACK
+
+## Mobile UI
+- Flutter
+- Dart
+- Material 3
+- Riverpod for state management
+- GoRouter for navigation
+
+## Camera
+Start with:
+- Flutter `camera` package
+
+Requirements:
+- front camera
+- video/frame stream
+- configurable resolution
+- configurable FPS if possible
+- exposure lock if supported
+- focus lock if supported
+- white balance lock if supported
+
+If the standard camera plugin becomes a limitation:
+- implement a native camera module
+- iOS: AVFoundation
+- Android: CameraX
+
+Do NOT prematurely write a native camera implementation unless required.
+
+## Computer Vision
+Preferred:
+- OpenCV
+
+Potential native APIs:
+- iOS: OpenCV + Swift/Objective-C++ bridge
+- Android: OpenCV Android SDK + Kotlin/JNI if necessary
+
+Initial algorithms:
+- grayscale conversion
+- Gaussian blur
+- local contrast normalization / CLAHE
+- thresholding
+- Canny edge detection
+- line/stripe detection
+- contour extraction
+- optical flow
+- frame alignment
+- local curvature analysis
+- anomaly detection
+- connected components
+- temporal aggregation
+
+Do NOT add TensorFlow / PyTorch in version 0 unless classical CV fails.
+
+## Persistence
+For MVP:
+- SQLite using Drift OR Isar
+
+Preferred:
+- Drift
+
+Store:
+- scan metadata
+- panel type
+- timestamps
+- pattern used
+- detected dent candidates
+- processing confidence
+- image references
+- optional thumbnail
+- device information
+
+## Local files
+Use:
+- app documents directory
+- image/video files stored locally
+
+Use:
+- `path_provider`
+
+## Device information
+Use:
+- `device_info_plus`
+
+## Motion / IMU
+Optional for MVP:
+- `sensors_plus`
+
+Use IMU only for:
+- estimating device movement
+- rejecting excessively fast scans
+- detecting unstable scanning
+
+Do not make IMU mandatory in first implementation.
+
+
+---
+
+# 5. INITIAL PROJECT STRUCTURE
+
+Use feature-first architecture.
+
+Example:
+
+lib/
+  app/
+    app.dart
+    router.dart
+    theme.dart
+
+  core/
+    camera/
+      camera_controller_service.dart
+      camera_frame.dart
+      camera_config.dart
+
+    cv/
+      cv_pipeline.dart
+      cv_frame_processor.dart
+      cv_debug_data.dart
+      dent_candidate.dart
+      stripe_detector.dart
+      frame_stabilizer.dart
+      anomaly_detector.dart
+      temporal_aggregator.dart
+
+    light/
+      light_pattern.dart
+      light_pattern_renderer.dart
+      light_pattern_controller.dart
+
+    storage/
+      database.dart
+      repositories/
+
+    sensors/
+      motion_service.dart
+
+    utils/
+
+  features/
+    home/
+    scan/
+      presentation/
+      domain/
+      data/
+
+    scan_result/
+    scan_history/
+    settings/
+    debug_lab/
+
+native/
+  ios/
+  android/
+
+Keep business logic outside UI widgets.
+
+
+---
+
+# 6. MVP USER FLOW
+
+## Screen 1 — Home
+
+Show:
+
+- "New Scan"
+- "Scan History"
+- "Light Test"
+- "CV Debug Lab"
+- Settings
+
+Main CTA:
+**New Scan**
+
+
+## Screen 2 — Select Vehicle Panel
+
+Initial supported panel types:
+
+- Front Left Door
+- Front Right Door
+- Rear Left Door
+- Rear Right Door
+- Hood
+- Roof
+- Front Fender
+- Rear Quarter
+- Other
+
+Do NOT require vehicle VIN, make, model, customer, or CRM data in MVP.
+
+Optional free-text label.
+
+
+## Screen 3 — Scan Setup
+
+Allow selection:
+
+### Pattern mode
+- Auto
+- Vertical stripes
+- Horizontal stripes
+- Fine stripes
+- Wide stripes
+- Moving stripes
+
+### Brightness
+- slider from 30% to 100%
+
+### Stripe width
+- configurable
+
+### Stripe spacing
+- configurable
+
+### Color
+MVP:
+- white on black
+- black on white
+
+Later:
+- warm white
+- RGB
+- alternate colors
+
+Default:
+- Auto
+
+
+## Screen 4 — Scan
+
+Critical requirement:
+
+The phone screen must display the structured-light pattern while the front-facing camera simultaneously records frames.
+
+The camera preview does NOT need to occupy the whole screen.
+
+Possible layout:
+
+- nearly full-screen light pattern
+- small translucent scan status UI
+- scan timer
+- movement indicator
+- stop button
+
+The structured-light pattern is the priority.
+
+Avoid large UI areas that reduce usable light-emitting surface.
+
+During scan show minimal status:
+
+- READY
+- MOVE SLOWLY
+- TOO FAST
+- LOW SIGNAL
+- GOOD SIGNAL
+- SCANNING
+
+Target initial scan duration:
+5–15 seconds.
+
+Store camera frames or video locally for offline processing.
+
+
+---
+
+# 7. STRUCTURED LIGHT ENGINE
+
+Create a reusable pattern renderer.
+
+Model:
+
+enum LightPatternType {
+  verticalStripes,
+  horizontalStripes,
+  fineVertical,
+  wideVertical,
+  movingVertical,
+  movingHorizontal,
+  checkerboard,
+  phaseShiftedVertical,
+}
+
+Each pattern must have:
+
+- id
+- type
+- stripeWidth
+- stripeSpacing
+- brightness
+- foregroundColor
+- backgroundColor
+- movementSpeed
+- phase
+- orientation
+- timestamp
+
+The exact pattern displayed at every captured frame must be known.
+
+This is important.
+
+For animated patterns, store:
+
+cameraFrameTimestamp
+patternTimestamp
+patternPhase
+
+so the processing pipeline knows what light configuration existed during the frame.
+
+
+---
+
+# 8. AUTO SCAN MODE
+
+The MVP should support an experimental automatic sequence.
+
+Example:
+
+Phase 1:
+- wide vertical stripes
+- 1 second
+
+Phase 2:
+- medium vertical stripes
+- 1 second
+
+Phase 3:
+- fine vertical stripes
+- 1 second
+
+Phase 4:
+- vertically shifted stripes
+- 1 second
+
+Optional:
+Phase 5:
+- horizontal stripes
+
+Purpose:
+Use different spatial frequencies and phases to better identify surface deformation.
+
+Make the sequence configurable.
+
+Do not hardcode the algorithm deeply into UI code.
+
+
+---
+
+# 9. CAMERA CAPTURE REQUIREMENTS
+
+Use front-facing camera.
+
+Target:
+- 1080p when available
+- minimum acceptable MVP: 720p
+- target 30 FPS
+
+If device overheats or processing is too slow:
+- record at 30 FPS
+- process sampled frames at 5–15 FPS
+
+Camera controls if supported:
+- disable beauty processing
+- disable portrait mode
+- disable face filters
+- lock exposure
+- lock focus
+- lock white balance
+
+The app must record metadata:
+- resolution
+- FPS
+- camera model if available
+- exposure information if available
+- device model
+- OS version
+
+
+---
+
+# 10. CV PIPELINE — VERSION 0
+
+The first CV implementation must be explicit and debuggable.
+
+Pipeline:
+
+1. Camera frame
+2. Crop optional ROI
+3. Convert to grayscale
+4. Normalize contrast
+5. Denoise
+6. Detect bright/dark stripes
+7. Extract stripe centerlines
+8. Estimate global surface trend
+9. Detect local deviations
+10. Aggregate deviations across neighboring lines
+11. Track deviations across frames
+12. Create dent candidates
+13. Score confidence
+14. Merge overlapping candidates
+15. Output dent map
+
+
+---
+
+# 11. STRIPE DETECTION
+
+Goal:
+Identify reflected structured-light stripes on the painted panel.
+
+Possible methods:
+
+Version A:
+- grayscale
+- adaptive threshold
+- morphological operations
+- contour detection
+- skeletonization
+- polyline fitting
+
+Version B:
+- edge detection
+- Hough transform
+- curve fitting
+
+Version C:
+- sample intensity perpendicular to expected stripe direction
+- detect local maxima/minima
+- track stripe centers frame-to-frame
+
+Prefer Version C if reflection quality is sufficient.
+
+Do not assume stripes remain straight.
+
+Car body panels naturally curve.
+
+The algorithm must estimate the NORMAL smooth curvature of the panel.
+
+Dent detection should look for LOCAL distortions relative to the smooth baseline.
+
+
+---
+
+# 12. DENT CANDIDATE DETECTION
+
+A dent candidate is a localized area where multiple neighboring stripe centerlines show correlated deformation.
+
+Important:
+One distorted pixel or one distorted line is NOT enough.
+
+Candidate conditions may include:
+
+- distortion exists across several adjacent stripes
+- distortion is spatially localized
+- distortion persists across multiple frames
+- distortion moves consistently with the surface during camera motion
+- anomaly magnitude exceeds local baseline noise
+
+Create:
+
+class DentCandidate {
+  id
+  normalizedX
+  normalizedY
+  radiusEstimate
+  severity
+  confidence
+  firstFrame
+  lastFrame
+  supportingFrames
+}
+
+Severity MVP:
+- small
+- medium
+- large
+
+Confidence:
+0.0–1.0
+
+Do not call radiusEstimate a true physical millimeter size yet.
+
+
+---
+
+# 13. FRAME STABILIZATION
+
+The phone will move by hand.
+
+The pipeline must compensate for motion.
+
+Initial approach:
+- optical flow
+- feature matching
+- homography where appropriate
+
+Potential OpenCV techniques:
+- ORB
+- Lucas-Kanade optical flow
+- RANSAC
+- perspective transform
+
+The goal is not to reconstruct the full 3D panel.
+
+The goal is to align observations well enough to avoid counting the same dent repeatedly.
+
+
+---
+
+# 14. TEMPORAL AGGREGATION
+
+Very important.
+
+A dent detected in one frame must be tracked across neighboring frames.
+
+Implement:
+- spatial proximity matching
+- confidence accumulation
+- duplicate suppression
+
+A candidate becomes "confirmed" only when observed in multiple frames.
+
+Example:
+- 1 frame = weak candidate
+- 3+ consistent frames = medium confidence
+- 5+ consistent frames = high confidence
+
+Numbers must be configurable.
+
+Do not hardcode thresholds everywhere.
+Put them in CV configuration.
+
+
+---
+
+# 15. RESULT VIEW
+
+After processing, show:
+
+- panel name
+- original/reference image
+- overlay with detected candidates
+- total candidate count
+- confidence per dent
+- severity class
+- scan quality score
+
+Example:
+
+Front Left Door
+
+Detected: 7 probable dents
+
+Small: 4
+Medium: 2
+Large: 1
+
+Overlay:
+- circles around candidate areas
+
+Color coding:
+- low confidence
+- medium confidence
+- high confidence
+
+Do not imply perfect certainty.
+
+Use wording:
+- "Probable dent"
+- "Candidate"
+- "Detected anomaly"
+
+until validation proves accuracy.
+
+
+---
+
+# 16. SCAN QUALITY SCORE
+
+Create a simple scan quality metric based on:
+
+- stripe visibility
+- brightness
+- motion speed
+- motion blur
+- camera stability
+- number of usable frames
+- detected surface area
+
+Output:
+0–100
+
+Statuses:
+- Poor
+- Acceptable
+- Good
+- Excellent
+
+If quality is poor:
+recommend rescanning.
+
+
+---
+
+# 17. LIGHT TEST MODE
+
+This is a required MVP development feature.
+
+Purpose:
+Test the optical concept without running the full dent detection pipeline.
+
+Screen should allow:
+
+- live pattern selection
+- brightness control
+- stripe width
+- stripe spacing
+- animation speed
+- orientation
+
+At the same time:
+- front camera records
+- optionally save test clip
+
+This tool is essential for physical testing with real car panels.
+
+
+---
+
+# 18. CV DEBUG LAB
+
+This is mandatory for MVP.
+
+Do not hide the CV pipeline.
+
+Allow developer/tester to inspect:
+
+- raw camera frame
+- grayscale
+- contrast-normalized frame
+- edge map
+- detected stripes
+- fitted stripe centerlines
+- baseline curve
+- anomaly heatmap
+- final dent candidates
+
+Allow:
+- pause frame
+- move frame-by-frame
+- adjust thresholds
+- rerun processing
+
+Make CV parameters editable through a debug settings screen.
+
+This will dramatically accelerate development.
+
+
+---
+
+# 19. DEBUG CONFIGURATION
+
+Create centralized configuration.
+
+Example:
+
+class CvConfig {
+  blurRadius
+  contrastLimit
+  thresholdBlockSize
+  thresholdC
+  minStripeLength
+  maxStripeGap
+  lineSmoothing
+  anomalyThreshold
+  minSupportingStripes
+  minSupportingFrames
+  candidateMergeRadius
+  maxCameraMotion
+}
+
+Persist debug values locally.
+
+Provide "Reset defaults".
+
+
+---
+
+# 20. DATA MODEL
+
+ScanSession:
+
+- id
+- createdAt
+- panelType
+- panelLabel
+- deviceModel
+- cameraResolution
+- patternMode
+- patternConfiguration
+- scanDuration
+- qualityScore
+- processingVersion
+- status
+- thumbnailPath
+
+ScanFrameMetadata:
+
+- frameIndex
+- timestamp
+- patternType
+- patternPhase
+- brightness
+- deviceOrientation
+- optional motion values
+
+DentCandidate:
+
+- id
+- scanId
+- normalizedX
+- normalizedY
+- estimatedRadius
+- severity
+- confidence
+- supportingFrameCount
+
+Do not store huge raw frame blobs directly in SQLite.
+Store file paths.
+
+
+---
+
+# 21. SCAN HISTORY
+
+Simple local history.
+
+Show:
+- thumbnail
+- panel name
+- date
+- dent count
+- quality score
+
+Allow:
+- open
+- delete
+- rescan
+
+No cloud sync in MVP.
+
+
+---
+
+# 22. OPTIONAL REPORT
+
+If easy to implement after the scanner works:
+
+Generate a simple shareable result image or PDF.
+
+But this is NOT a core technical milestone.
+
+Do not spend significant time on PDF generation before the scanner works.
+
+
+---
+
+# 23. SETTINGS
+
+MVP settings:
+
+- default brightness
+- default pattern mode
+- save raw videos: on/off
+- keep debug frames: on/off
+- processing quality:
+  - fast
+  - balanced
+  - high quality
+
+Developer settings:
+- CV debug mode
+- threshold controls
+- show FPS
+- show processing time
+- show device/camera information
+
+
+---
+
+# 24. PERFORMANCE REQUIREMENTS
+
+Scanner must not freeze UI.
+
+Never run expensive CV work on the main UI isolate/thread.
+
+Use:
+- Dart isolates where appropriate
+- native background processing
+- frame sampling
+
+Target:
+- UI remains responsive at all times
+- pattern animation stays smooth
+- capture timestamps remain consistent
+
+Processing can occur:
+- during scan partially
+- after scan fully
+
+For MVP prefer:
+record first → process after scan
+
+This makes debugging easier and reduces dropped frames.
+
+
+---
+
+# 25. IMPORTANT TECHNICAL RISK
+
+The application simultaneously uses:
+- front camera
+- screen as strong light source
+
+This can create:
+- screen flicker artifacts
+- rolling shutter artifacts
+- exposure instability
+- reflections from ambient environment
+- screen brightness limitations
+- autofocus instability
+- PWM brightness effects
+
+Therefore build diagnostics.
+
+Record:
+- device FPS
+- frame timestamps
+- pattern timing
+- brightness
+- device model
+
+We need to learn which phones work best.
+
+
+---
+
+# 26. DEVICE TEST MATRIX
+
+Initially test on at least:
+
+- one recent iPhone
+- one recent Samsung Galaxy
+- one recent Google Pixel if available
+
+For every device record:
+
+- front camera resolution
+- FPS
+- autofocus behavior
+- exposure behavior
+- screen brightness
+- detected stripe quality
+- dent visibility
+- thermal behavior
+
+Do not assume behavior is identical across devices.
+
+
+---
+
+# 27. EXPERIMENTAL VALIDATION
+
+Before adding AI, validate the physical signal.
+
+Create a test dataset.
+
+For each dent:
+
+- photograph panel normally
+- record scan with wide stripes
+- record scan with medium stripes
+- record scan with fine stripes
+- record scan with moving stripes
+- record distance
+- record approximate dent diameter
+- record panel type
+- record lighting conditions
+
+Initial target dataset:
+50–100 real dents.
+
+Include:
+- shallow hail dents
+- medium dents
+- larger parking dents
+- false-positive areas
+- body lines
+- handles
+- panel edges
+- dirt/reflections
+
+
+---
+
+# 28. MVP SUCCESS CRITERIA
+
+The MVP is successful if:
+
+1. Structured stripes from the phone screen are clearly visible in the front-camera recording through reflection on the car panel.
+
+2. The CV pipeline can consistently extract stripe geometry.
+
+3. Visible dents produce measurable local stripe distortion.
+
+4. The same dent can be tracked across multiple frames.
+
+5. The system can create a basic dent map.
+
+6. The technician can complete:
+   new scan → scan → processing → result
+
+without external hardware.
+
+A desirable early benchmark:
+- reliable detection of obvious dents approximately 8–10 mm and larger in controlled indoor conditions.
+
+This is a target, not a guaranteed specification.
+
+
+---
+
+# 29. DO NOT BUILD YET
+
+Do NOT implement the following before the core optical/CV hypothesis works:
+
+- CRM
+- user accounts
+- Stripe payments
+- subscriptions
+- cloud backend
+- multi-tenant system
+- customer management
+- VIN decoding
+- insurance integrations
+- automatic repair pricing
+- marketplace
+- technician scheduling
+- advanced PDF reports
+- social login
+- admin dashboard
+- external hardware integration
+- full 3D reconstruction
+- exact dent depth measurement
+- AR navigation
+- custom AI model training
+
+Keep the product focused.
+
+
+---
+
+# 30. PHASE 1 DEVELOPMENT ORDER
+
+Implement in this exact order:
+
+1. Flutter project setup
+2. Navigation and base architecture
+3. Structured-light pattern renderer
+4. Light Test screen
+5. Front camera capture
+6. Simultaneous pattern display + camera recording
+7. Save scan locally
+8. CV Debug Lab
+9. Stripe detection
+10. Stripe centerline extraction
+11. Frame stabilization
+12. Local distortion detection
+13. Temporal aggregation
+14. Dent candidate map
+15. Result screen
+16. Scan history
+17. Scan quality score
+
+Do not jump to later features before earlier stages are working.
+
+
+---
+
+# 31. CODING RULES
+
+General:
+
+- Write production-quality, readable code.
+- Avoid giant files.
+- Avoid giant widgets.
+- Avoid magic numbers.
+- Use typed models.
+- Use dependency injection via Riverpod.
+- Keep CV code independent from Flutter widgets.
+- Keep platform/native code behind interfaces.
+- Add comments only where logic is non-obvious.
+- Prefer composition over inheritance.
+- Use immutable state where practical.
+- Use async APIs correctly.
+- Never block UI thread.
+
+Naming:
+- clear descriptive English names
+- no abbreviations unless standard
+
+Error handling:
+- camera permission denied
+- camera unavailable
+- front camera unavailable
+- insufficient storage
+- failed recording
+- unsupported resolution
+- processing failure
+
+Every user-facing error must have a clear recovery action.
+
+
+---
+
+# 32. TESTING RULES
+
+Write tests for:
+
+- pattern configuration
+- scan session state transitions
+- dent candidate merging
+- confidence calculation
+- scan quality calculation
+- persistence
+
+For CV:
+use saved fixture images/video frames.
+
+Create:
+test/fixtures/cv/
+
+Include deterministic test frames when available.
+
+Do not rely only on live camera testing.
+
+
+---
+
+# 33. LOGGING
+
+Implement structured debug logging.
+
+Categories:
+
+- CAMERA
+- LIGHT
+- SCAN
+- CV
+- STORAGE
+- PERFORMANCE
+
+Log:
+- scan start/end
+- FPS
+- dropped frames if known
+- processing duration
+- stripe count
+- candidate count
+- quality score
+- errors
+
+Do not log sensitive user content unnecessarily.
+
+
+---
+
+# 34. UX RULES
+
+This application is a professional tool for technicians.
+
+UI must be:
+- fast
+- minimal
+- high contrast
+- usable in a workshop
+- usable with one hand where possible
+
+Prefer:
+- dark UI during scan
+- large buttons
+- simple language
+- minimal modal dialogs
+
+During actual scanning:
+the display pattern must occupy as much of the screen as possible.
+
+
+---
+
+# 35. FUTURE ARCHITECTURE — DO NOT IMPLEMENT YET
+
+Architecture should leave room for:
+
+### Advanced light patterns
+- phase-shifting structured light
+- Gray-code patterns
+- sinusoidal patterns
+- adaptive stripe density
+
+### AI
+Possible later model:
+- classifier for candidate dents
+- false-positive rejection
+- dent severity classification
+- segmentation model
+
+Possible stacks:
+- TensorFlow Lite
+- Core ML
+- ONNX Runtime Mobile
+
+### Optional hardware
+Future versions may support:
+- external LED panel
+- phone clip
+- fixed phone-to-light geometry
+- Bluetooth-controlled light
+- calibrated accessory
+
+But current MVP must work without hardware.
+
+### Business features
+Later:
+- estimates
+- before/after comparison
+- reports
+- customer approval
+- hail counting
+- repair pricing
+- shop/team accounts
+- subscription
+
+
+---
+
+# 36. IMPORTANT PRODUCT LANGUAGE
+
+Internally:
+- dent candidate
+- anomaly
+- stripe distortion
+- confidence
+- scan quality
+
+Avoid claiming:
+- exact 3D measurement
+- exact depth
+- guaranteed dent detection
+- insurance-grade measurement
+
+until validated.
+
+
+---
+
+# 37. FIRST DEVELOPMENT MILESTONE
+
+The FIRST real milestone is not a polished app.
+
+It is:
+
+> Display structured stripes on the phone while simultaneously recording the reflected stripes from the car panel using the front-facing camera, save the recording, and provide a debug screen where stripe deformation can be visually inspected frame by frame.
+
+Nothing should take priority over this milestone.
+
+If this does not work physically, stop and reassess the optical setup before building more features.
+
+
+---
+
+# 38. SECOND DEVELOPMENT MILESTONE
+
+After milestone 1 works:
+
+> Automatically extract reflected stripe centerlines and visualize them over the recorded frames.
+
+Display:
+- original frame
+- detected stripes
+- fitted centerlines
+
+No dent detection is required yet.
+
+
+---
+
+# 39. THIRD DEVELOPMENT MILESTONE
+
+After stripe detection works:
+
+> Detect localized curvature anomalies and aggregate them across frames into stable dent candidates.
+
+Then render:
+- circle / marker
+- confidence
+- candidate count
+
+
+---
+
+# 40. DEFINITION OF MVP COMPLETE
+
+MVP is complete when a technician can:
+
+1. Open the app
+2. Tap New Scan
+3. Select a panel
+4. Use Auto or manual light pattern
+5. Scan a real car panel using only the smartphone
+6. Stop scan
+7. Process captured frames
+8. See automatically detected dent candidates
+9. Review scan quality
+10. Save scan locally
+11. Open the scan later from history
+
+No account or internet connection should be required.
+
+
+---
+
+# 41. CURSOR EXECUTION INSTRUCTIONS
+
+When generating code:
+
+1. Do not invent backend services.
+2. Do not add authentication.
+3. Do not change the selected stack without a concrete technical reason.
+4. Prefer incremental implementation.
+5. Before major refactors, preserve currently working scan functionality.
+6. Keep all experimental CV parameters configurable.
+7. Always expose intermediate CV output in Debug Lab.
+8. Avoid fake placeholder AI.
+9. Never label random heuristic output as "AI".
+10. Optimize for physical validation first, product polish second.
+
+When asked to implement a feature:
+- inspect existing architecture
+- reuse existing abstractions
+- avoid duplicate services
+- keep scanner pipeline modular
+- add tests where reasonable
+
+If a technical limitation is discovered:
+- document it clearly
+- propose the smallest viable workaround
+- do not silently change product behavior.
+
+
+---
+
+# 42. RECOMMENDED INITIAL DEPENDENCIES
+
+Use current stable versions.
+
+Suggested packages:
+
+- flutter_riverpod
+- go_router
+- camera
+- path_provider
+- permission_handler
+- drift
+- sqlite3_flutter_libs
+- device_info_plus
+- sensors_plus
+- freezed_annotation
+- json_annotation
+
+Dev:
+- build_runner
+- freezed
+- json_serializable
+- drift_dev
+- flutter_lints
+
+OpenCV integration:
+do not select a random unmaintained Flutter wrapper.
+
+Prefer:
+- maintained native OpenCV integration
+or
+- custom native bridge if necessary.
+
+Verify package maintenance status before adding dependencies.
+
+
+---
+
+# 43. GIT / DEVELOPMENT PRACTICES
+
+Use logical commits.
+
+Examples:
+
+feat(light): add vertical stripe renderer
+feat(camera): add front camera recording
+feat(scan): save scan sessions locally
+feat(cv): detect stripe centerlines
+feat(cv): add frame stabilization
+feat(cv): aggregate dent candidates
+feat(debug): add CV visualization lab
+
+Do not mix large unrelated features in one commit.
+
+
+---
+
+# 44. README REQUIREMENTS
+
+Maintain README.md with:
+
+- product goal
+- architecture
+- setup
+- supported platforms
+- current milestone
+- how to run
+- camera permissions
+- CV pipeline description
+- known device limitations
+- test procedure
+
+Also keep:
+
+docs/experiments.md
+
+Record every real-world test:
+
+- phone
+- vehicle/panel
+- environment
+- pattern
+- brightness
+- distance
+- result
+- notes
+
+This experiment history is important for developing the scanner.
+
+
+---
+
+# FINAL PRIORITY
+
+The project is an experiment-driven computer-vision product.
+
+Always optimize for answering:
+
+> "Can we reliably see and detect PDR dent deformation using the reflection of the phone's own structured-light screen recorded by the phone's front-facing camera?"
+
+Until the answer is clearly YES, avoid spending significant development time on anything unrelated to this core hypothesis.

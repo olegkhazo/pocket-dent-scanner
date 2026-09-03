@@ -1,0 +1,56 @@
+name: pocket_dent_scanner
+description: MVP mobile app for PDR dent detection using structured light from phone screen.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # Camera
+  camera: ^0.11.0+2
+
+  # Storage
+  drift: ^2.20.3
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Device info
+  device_info_plus: ^10.1.2
+
+  # Motion/IMU (optional)
+  sensors_plus: ^4.0.2
+
+  # Code generation
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code generation
+  build_runner: ^2.4.12
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.3
+  drift_dev: ^2.20.3
+
+  # Linting
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
