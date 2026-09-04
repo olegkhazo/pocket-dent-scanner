@@ -6,7 +6,7 @@ part 'dent_candidate.g.dart';
 enum DentSeverity { small, medium, large }
 
 @freezed
-class DentCandidate with _$DentCandidate {
+abstract class DentCandidate with _$DentCandidate {
   const factory DentCandidate({
     required String id,
     required double normalizedX,

@@ -27,7 +27,7 @@ class _ColorConverter implements JsonConverter<Color, int> {
 }
 
 @freezed
-class LightPattern with _$LightPattern {
+abstract class LightPattern with _$LightPattern {
   const factory LightPattern({
     required String id,
     required LightPatternType type,

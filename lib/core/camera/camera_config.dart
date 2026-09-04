@@ -4,7 +4,7 @@ part 'camera_config.freezed.dart';
 part 'camera_config.g.dart';
 
 @freezed
-class CameraConfig with _$CameraConfig {
+abstract class CameraConfig with _$CameraConfig {
   const factory CameraConfig({
     @Default('1920x1080') String resolution,
     @Default(30) int targetFps,

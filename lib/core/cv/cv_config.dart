@@ -4,7 +4,7 @@ part 'cv_config.freezed.dart';
 part 'cv_config.g.dart';
 
 @freezed
-class CvConfig with _$CvConfig {
+abstract class CvConfig with _$CvConfig {
   const factory CvConfig({
     @Default(3) int blurRadius,
     @Default(2.0) double contrastLimit,

@@ -1,0 +1,46 @@
+workflows:
+  android-debug:
+    name: Android Debug APK
+    max_build_duration: 30
+    environment:
+      flutter: 3.47.2
+      java: 17
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Generate code
+        script: dart run build_runner build
+      - name: Build debug APK
+        script: flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
+    publishing:
+      email:
+        recipients:
+          - o.zhuravko@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  android-release:
+    name: Android Release APK
+    max_build_duration: 30
+    environment:
+      flutter: 3.47.2
+      java: 17
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Generate code
+        script: dart run build_runner build
+      - name: Build release APK
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+    publishing:
+      email:
+        recipients:
+          - o.zhuravko@gmail.com
+        notify:
+          success: true
+          failure: true

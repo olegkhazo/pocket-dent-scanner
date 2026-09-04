@@ -9,8 +9,8 @@ class LightTestControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pattern = ref.watch(lightPatternNotifierProvider);
-    final notifier = ref.read(lightPatternNotifierProvider.notifier);
+    final pattern = ref.watch(lightPatternProvider);
+    final notifier = ref.read(lightPatternProvider.notifier);
 
     return Material(
       color: Colors.black87,

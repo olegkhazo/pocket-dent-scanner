@@ -8,7 +8,7 @@ import '../features/light_test/light_test_screen.dart';
 part 'router.g.dart';
 
 @riverpod
-GoRouter router(RouterRef ref) {
+GoRouter router(Ref ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [

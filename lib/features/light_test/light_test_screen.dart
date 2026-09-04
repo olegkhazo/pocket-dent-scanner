@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/light/light_pattern_notifier.dart';
@@ -31,7 +32,7 @@ class _LightTestScreenState extends ConsumerState<LightTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pattern = ref.watch(lightPatternNotifierProvider);
+    final pattern = ref.watch(lightPatternProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -48,7 +49,7 @@ class _LightTestScreenState extends ConsumerState<LightTestScreen> {
             child: SafeArea(
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white54, size: 24),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.go('/'),
                 tooltip: 'Exit',
               ),
             ),
