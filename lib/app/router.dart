@@ -4,6 +4,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../features/home/home_screen.dart';
 import '../features/light_test/light_test_screen.dart';
+import '../features/scan/presentation/panel_select_screen.dart';
+import '../features/scan/presentation/scan_saved_screen.dart';
+import '../features/scan/presentation/scan_screen.dart';
 
 part 'router.g.dart';
 
@@ -20,17 +23,26 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/scan/panel',
         name: 'panel-select',
-        builder: (context, state) => const Placeholder(),
-      ),
-      GoRoute(
-        path: '/scan/setup',
-        name: 'scan-setup',
-        builder: (context, state) => const Placeholder(),
+        builder: (context, state) => const PanelSelectScreen(),
       ),
       GoRoute(
         path: '/scan',
         name: 'scan',
-        builder: (context, state) => const Placeholder(),
+        builder: (context, state) => ScanScreen(
+          panelName: state.uri.queryParameters['panel'] ?? 'other',
+        ),
+      ),
+      GoRoute(
+        path: '/scan/saved',
+        name: 'scan-saved',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return ScanSavedScreen(
+            filePath: extra['path'] as String?,
+            panelName: extra['panel'] as String? ?? 'Unknown',
+            durationSeconds: extra['duration'] as int? ?? 0,
+          );
+        },
       ),
       GoRoute(
         path: '/scan/result/:id',

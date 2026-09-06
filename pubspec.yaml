@@ -22,6 +22,10 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.24
   path_provider: ^2.1.4
 
+  # Camera
+  camera: ^0.11.0+2
+  permission_handler: ^11.3.1
+
   # Screen wakelock — keeps display on during scan (screen is the light source)
   wakelock_plus: ^1.2.8
 
