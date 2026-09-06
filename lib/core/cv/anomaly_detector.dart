@@ -118,7 +118,7 @@ class AnomalyDetector {
         varX += pow(xs[i] - meanX, 2);
       }
       final slope = varX > 0 ? cov / varX : 0;
-      return [meanY - slope * meanX, slope, 0];
+      return [(meanY - slope * meanX).toDouble(), slope.toDouble(), 0.0];
     }
   }
 

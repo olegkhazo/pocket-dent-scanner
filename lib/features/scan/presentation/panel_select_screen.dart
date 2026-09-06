@@ -13,7 +13,7 @@ class PanelSelectScreen extends StatelessWidget {
         title: const Text('Select Panel'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
+          onPressed: () => context.pop(),
         ),
       ),
       body: Padding(

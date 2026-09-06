@@ -106,7 +106,7 @@ class _InstructionsScreenState extends State<InstructionsScreen> {
                     )
                 : null,
             onDone:
-                _page == _steps.length - 1 ? () => context.go('/') : null,
+                _page == _steps.length - 1 ? () => context.pop() : null,
           ),
         ],
       ),
@@ -725,7 +725,7 @@ class _LightingDiagramPainter extends CustomPainter {
 
     // Door stripes.
     final doorPaint = Paint()
-      ..color = Colors.white20
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..strokeWidth = 1;
     for (var i = 1; i <= 3; i++) {
       canvas.drawLine(

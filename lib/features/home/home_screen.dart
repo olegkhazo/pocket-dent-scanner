@@ -30,7 +30,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
               FilledButton.icon(
-                onPressed: () => context.goNamed('panel-select'),
+                onPressed: () => context.pushNamed('panel-select'),
                 icon: const Icon(Icons.camera_alt_outlined),
                 label: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 14),
@@ -41,25 +41,25 @@ class HomeScreen extends StatelessWidget {
               _NavButton(
                 label: 'Light Test',
                 icon: Icons.light_mode_outlined,
-                onPressed: () => context.goNamed('light-test'),
+                onPressed: () => context.pushNamed('light-test'),
               ),
               const SizedBox(height: 12),
               _NavButton(
                 label: 'CV Debug Lab',
                 icon: Icons.biotech_outlined,
-                onPressed: () => context.goNamed('debug-lab'),
+                onPressed: () => context.pushNamed('debug-lab'),
               ),
               const SizedBox(height: 12),
               _NavButton(
                 label: 'How to Scan',
                 icon: Icons.menu_book_outlined,
-                onPressed: () => context.goNamed('instructions'),
+                onPressed: () => context.pushNamed('instructions'),
               ),
               const SizedBox(height: 12),
               _NavButton(
                 label: 'Scan History',
                 icon: Icons.history,
-                onPressed: () => context.goNamed('scan-history'),
+                onPressed: () => context.pushNamed('scan-history'),
               ),
             ],
           ),

@@ -49,7 +49,7 @@ class _LightTestScreenState extends ConsumerState<LightTestScreen> {
             child: SafeArea(
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white54, size: 24),
-                onPressed: () => context.go('/'),
+                onPressed: () => context.pop(),
                 tooltip: 'Exit',
               ),
             ),

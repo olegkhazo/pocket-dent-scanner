@@ -33,7 +33,7 @@ class StripeDetector {
   List<double> _extractRow(img.Image gray, int y) {
     return List<double>.generate(
       gray.width,
-      (x) => gray.getPixel(x, y).luminance,
+      (x) => gray.getPixel(x, y).luminance.toDouble(),
     );
   }
 
