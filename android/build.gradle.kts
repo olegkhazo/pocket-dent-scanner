@@ -19,6 +19,17 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Force all Flutter plugins to compile against SDK 36.
+subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.library") || plugins.hasPlugin("com.android.application")) {
+            extensions.configure<com.android.build.gradle.BaseExtension> {
+                compileSdkVersion(36)
+            }
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
