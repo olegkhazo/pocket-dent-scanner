@@ -29,6 +29,9 @@ dependencies:
   # Screen wakelock — keeps display on during scan (screen is the light source)
   wakelock_plus: ^1.2.8
 
+  # Pure Dart image processing for CV pipeline (no native deps)
+  image: ^4.2.0
+
   # Code generation models
   freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0

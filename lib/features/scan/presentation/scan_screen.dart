@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +13,7 @@ import '../../../core/light/light_pattern_notifier.dart';
 import '../../../core/light/light_pattern_widget.dart';
 import '../domain/scan_panel.dart';
 
-enum _ScanStatus { requesting, ready, scanning, stopping, error }
+enum _ScanStatus { requesting, scanning, stopping, error }
 
 class ScanScreen extends ConsumerStatefulWidget {
   final String panelName;
@@ -29,8 +27,10 @@ class ScanScreen extends ConsumerStatefulWidget {
 class _ScanScreenState extends ConsumerState<ScanScreen> {
   _ScanStatus _status = _ScanStatus.requesting;
   int _elapsed = 0;
+  int _frameCount = 0;
   Timer? _timer;
   String? _errorMessage;
+  String? _sessionDir;
 
   PanelType get _panel {
     try {
@@ -61,10 +61,22 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     try {
       final service = ref.read(cameraServiceProvider);
       await service.initialize();
-      await service.startRecording();
+
+      final dir = await getApplicationDocumentsDirectory();
+      _sessionDir =
+          '${dir.path}/scans/${DateTime.now().millisecondsSinceEpoch}';
+
+      await service.startFrameCapture(_sessionDir!);
+
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        setState(() => _elapsed++);
+        setState(() {
+          _elapsed++;
+          _frameCount = ref.read(cameraServiceProvider).isCapturing
+              ? (_elapsed * 5)
+              : _frameCount;
+        });
       });
+
       setState(() => _status = _ScanStatus.scanning);
     } catch (e) {
       setState(() {
@@ -81,21 +93,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
 
     try {
       final service = ref.read(cameraServiceProvider);
-      final xfile = await service.stopRecording();
-
-      String? savedPath;
-      if (xfile != null) {
-        final dir = await getApplicationDocumentsDirectory();
-        final scansDir = Directory('${dir.path}/scans');
-        await scansDir.create(recursive: true);
-        final dest = '${scansDir.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
-        await File(xfile.path).copy(dest);
-        savedPath = dest;
-      }
+      final framePaths = await service.stopFrameCapture();
 
       if (mounted) {
-        context.goNamed('scan-saved', extra: {
-          'path': savedPath,
+        context.goNamed('scan-processing', extra: {
+          'framePaths': framePaths,
+          'sessionDir': _sessionDir,
           'panel': _panel.displayName,
           'duration': _elapsed,
         });
@@ -103,7 +106,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     } catch (e) {
       setState(() {
         _status = _ScanStatus.error;
-        _errorMessage = 'Failed to save scan: $e';
+        _errorMessage = 'Failed to stop scan: $e';
       });
     }
   }
@@ -118,8 +121,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
 
   String get _statusLabel => switch (_status) {
         _ScanStatus.requesting => 'REQUESTING CAMERA',
-        _ScanStatus.ready => 'READY',
-        _ScanStatus.scanning => _elapsed < 2 ? 'SCANNING — MOVE SLOWLY' : 'SCANNING',
+        _ScanStatus.scanning =>
+          _elapsed < 2 ? 'SCANNING — MOVE SLOWLY' : 'SCANNING',
         _ScanStatus.stopping => 'SAVING...',
         _ScanStatus.error => 'ERROR',
       };
@@ -167,10 +170,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Pattern fills entire screen.
           LightPatternWidget(pattern: pattern),
-
-          // Overlay — minimal, non-intrusive.
           SafeArea(
             child: Column(
               children: [
@@ -196,10 +196,15 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                       icon: const Icon(Icons.stop_circle_outlined),
                       label: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Text('STOP', style: TextStyle(fontSize: 16, letterSpacing: 2)),
+                        child: Text(
+                          'STOP',
+                          style:
+                              TextStyle(fontSize: 16, letterSpacing: 2),
+                        ),
                       ),
                       style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.15),
+                        backgroundColor:
+                            Colors.white.withValues(alpha: 0.15),
                         foregroundColor: Colors.white,
                         minimumSize: const Size(160, 48),
                       ),

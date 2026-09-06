@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../features/debug_lab/debug_lab_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/light_test/light_test_screen.dart';
 import '../features/scan/presentation/panel_select_screen.dart';
-import '../features/scan/presentation/scan_saved_screen.dart';
+import '../features/scan/presentation/scan_processing_screen.dart';
+import '../features/scan/presentation/scan_result_screen.dart';
 import '../features/scan/presentation/scan_screen.dart';
+import '../core/cv/cv_result.dart';
 
 part 'router.g.dart';
 
@@ -33,21 +36,31 @@ GoRouter router(Ref ref) {
         ),
       ),
       GoRoute(
-        path: '/scan/saved',
-        name: 'scan-saved',
+        path: '/scan/processing',
+        name: 'scan-processing',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
-          return ScanSavedScreen(
-            filePath: extra['path'] as String?,
+          return ScanProcessingScreen(
+            framePaths:
+                (extra['framePaths'] as List?)?.cast<String>() ?? [],
+            sessionDir: extra['sessionDir'] as String? ?? '',
             panelName: extra['panel'] as String? ?? 'Unknown',
             durationSeconds: extra['duration'] as int? ?? 0,
           );
         },
       ),
       GoRoute(
-        path: '/scan/result/:id',
+        path: '/scan/result',
         name: 'scan-result',
-        builder: (context, state) => const Placeholder(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return ScanResultScreen(
+            result: extra['result'] as CvResult? ?? CvResult.empty,
+            sessionDir: extra['sessionDir'] as String? ?? '',
+            panelName: extra['panel'] as String? ?? 'Unknown',
+            durationSeconds: extra['duration'] as int? ?? 0,
+          );
+        },
       ),
       GoRoute(
         path: '/history',
@@ -62,7 +75,9 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/debug-lab',
         name: 'debug-lab',
-        builder: (context, state) => const Placeholder(),
+        builder: (context, state) => DebugLabScreen(
+          initialSessionDir: state.extra as String?,
+        ),
       ),
       GoRoute(
         path: '/settings',
