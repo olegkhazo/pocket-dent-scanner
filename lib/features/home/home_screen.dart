@@ -51,6 +51,12 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _NavButton(
+                label: 'How to Scan',
+                icon: Icons.menu_book_outlined,
+                onPressed: () => context.goNamed('instructions'),
+              ),
+              const SizedBox(height: 12),
+              _NavButton(
                 label: 'Scan History',
                 icon: Icons.history,
                 onPressed: () => context.goNamed('scan-history'),

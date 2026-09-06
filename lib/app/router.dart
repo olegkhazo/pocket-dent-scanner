@@ -10,6 +10,7 @@ import '../features/scan/presentation/scan_processing_screen.dart';
 import '../features/scan/presentation/scan_result_screen.dart';
 import '../features/scan/presentation/scan_screen.dart';
 import '../core/cv/cv_result.dart';
+import '../features/instructions/instructions_screen.dart';
 
 part 'router.g.dart';
 
@@ -78,6 +79,11 @@ GoRouter router(Ref ref) {
         builder: (context, state) => DebugLabScreen(
           initialSessionDir: state.extra as String?,
         ),
+      ),
+      GoRoute(
+        path: '/instructions',
+        name: 'instructions',
+        builder: (context, state) => const InstructionsScreen(),
       ),
       GoRoute(
         path: '/settings',
