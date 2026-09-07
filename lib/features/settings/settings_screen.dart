@@ -10,8 +10,8 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(appSettingsNotifierProvider);
-    final notifier = ref.read(appSettingsNotifierProvider.notifier);
+    final settings = ref.watch(appSettingsProvider);
+    final notifier = ref.read(appSettingsProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(

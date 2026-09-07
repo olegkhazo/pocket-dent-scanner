@@ -38,7 +38,7 @@ class _ScanProcessingScreenState extends ConsumerState<ScanProcessingScreen> {
   }
 
   Future<void> _process() async {
-    final settings = ref.read(appSettingsNotifierProvider);
+    final settings = ref.read(appSettingsProvider);
 
     final input = CvPipelineInput(
       framePaths: widget.framePaths,

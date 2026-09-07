@@ -8,7 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final container = ProviderContainer();
-  await container.read(appSettingsNotifierProvider.notifier).load();
+  await container.read(appSettingsProvider.notifier).load();
 
   runApp(UncontrolledProviderScope(
     container: container,
