@@ -32,6 +32,9 @@ dependencies:
   # Pure Dart image processing for CV pipeline (no native deps)
   image: ^4.2.0
 
+  # Settings persistence
+  shared_preferences: ^2.3.4
+
   # Code generation models
   freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0

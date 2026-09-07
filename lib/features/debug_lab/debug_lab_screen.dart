@@ -30,6 +30,13 @@ class _DebugLabScreenState extends State<DebugLabScreen> {
   bool _processing = false;
   CvConfig _config = const CvConfig();
 
+  bool get _currentFrameIsUnstable {
+    if (_cvResult == null || _frameIndex >= _cvResult!.frames.length) {
+      return false;
+    }
+    return !_cvResult!.frames[_frameIndex].isStable;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -191,8 +198,13 @@ class _DebugLabScreenState extends State<DebugLabScreen> {
                   : null,
             ),
             Text(
-              '${_frameIndex + 1} / ${_framePaths.length}',
-              style: const TextStyle(color: Colors.white70),
+              '${_frameIndex + 1} / ${_framePaths.length}'
+              '${_currentFrameIsUnstable ? '  ⚡' : ''}',
+              style: TextStyle(
+                color: _currentFrameIsUnstable
+                    ? Colors.orangeAccent
+                    : Colors.white70,
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right),

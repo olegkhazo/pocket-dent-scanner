@@ -77,7 +77,33 @@ class ScanResultScreen extends StatelessWidget {
                         style: TextStyle(color: Colors.white54))),
               ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+
+            // Poor quality warning.
+            if (result.qualityScore < 40)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_outlined,
+                        color: Colors.orangeAccent, size: 18),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Poor scan quality — results may be unreliable. '
+                        'Try finding the reflection angle and rescan.',
+                        style: TextStyle(color: Colors.orangeAccent, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             // Summary.
             _SummaryCard(
@@ -85,8 +111,10 @@ class ScanResultScreen extends StatelessWidget {
               small: small,
               medium: medium,
               large: large,
-              quality: result.qualityScore,
+              qualityScore: result.qualityScore,
+              qualityLabel: result.qualityLabel,
               frameCount: result.frameCount,
+              stableFrames: result.stableFrameCount,
               duration: _duration,
             ),
 
@@ -180,8 +208,10 @@ class _CandidateOverlayPainter extends CustomPainter {
 class _SummaryCard extends StatelessWidget {
   final int total;
   final int small, medium, large;
-  final double quality;
+  final int qualityScore;
+  final ScanQualityLabel qualityLabel;
   final int frameCount;
+  final int stableFrames;
   final String duration;
 
   const _SummaryCard({
@@ -189,10 +219,19 @@ class _SummaryCard extends StatelessWidget {
     required this.small,
     required this.medium,
     required this.large,
-    required this.quality,
+    required this.qualityScore,
+    required this.qualityLabel,
     required this.frameCount,
+    required this.stableFrames,
     required this.duration,
   });
+
+  Color get _qualityColor {
+    if (qualityScore >= 80) return Colors.greenAccent;
+    if (qualityScore >= 60) return Colors.lightGreenAccent;
+    if (qualityScore >= 40) return Colors.orangeAccent;
+    return Colors.redAccent;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -205,15 +244,34 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            total == 0
-                ? 'No dent candidates detected'
-                : '$total probable dent${total == 1 ? '' : 's'} detected',
-            style: TextStyle(
-              color: total == 0 ? Colors.white54 : Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  total == 0
+                      ? 'No dent candidates detected'
+                      : '$total probable dent${total == 1 ? '' : 's'} detected',
+                  style: TextStyle(
+                    color: total == 0 ? Colors.white54 : Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // Quality badge.
+              Column(
+                children: [
+                  Text('$qualityScore',
+                      style: TextStyle(
+                          color: _qualityColor,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold)),
+                  Text(qualityLabel.text,
+                      style: TextStyle(color: _qualityColor, fontSize: 10)),
+                ],
+              ),
+            ],
           ),
           if (total > 0) ...[
             const SizedBox(height: 12),
@@ -223,8 +281,7 @@ class _SummaryCard extends StatelessWidget {
           ],
           const Divider(color: Colors.white12, height: 24),
           _Row('Frames analysed', frameCount, Colors.white54),
-          _Row('Scan quality',
-              '${(quality * 100).round()}%', Colors.white54),
+          _Row('Stable frames', stableFrames, Colors.white54),
           _Row('Duration', duration, Colors.white54),
           const SizedBox(height: 8),
           const Text(
@@ -241,9 +298,9 @@ class _SummaryCard extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13)),
-            Text(value.toString(),
-                style: TextStyle(color: color, fontSize: 13)),
+            Text(label,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+            Text(value.toString(), style: TextStyle(color: color, fontSize: 13)),
           ],
         ),
       );

@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
+import 'features/settings/app_settings.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: PocketDentScannerApp()));
+
+  final container = ProviderContainer();
+  await container.read(appSettingsNotifierProvider.notifier).load();
+
+  runApp(UncontrolledProviderScope(
+    container: container,
+    child: const PocketDentScannerApp(),
+  ));
 }
