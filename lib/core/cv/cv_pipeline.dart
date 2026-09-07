@@ -1,12 +1,11 @@
 import 'dart:io';
-import 'dart:ui';
+import 'dart:math';
 
 import 'package:image/image.dart' as img;
 
 import 'anomaly_detector.dart';
 import 'cv_config.dart';
 import 'cv_result.dart';
-import 'dent_candidate.dart';
 import 'stripe_detector.dart';
 import 'temporal_aggregator.dart';
 
@@ -18,60 +17,78 @@ class CvPipelineInput {
 }
 
 class CvPipeline {
-  // Top-level function for use with Flutter's compute().
-  // Must be a top-level or static function to run in an isolate.
+  // Max frames to process — keeps processing under a few seconds on device.
+  static const int _maxFrames = 15;
+
+  // Max width for processing — downscale for speed without losing stripe detail.
+  static const int _maxProcessWidth = 480;
+
   static Future<CvResult> processFrames(CvPipelineInput input) async {
     final config = input.config;
-    final paths = input.framePaths;
 
-    if (paths.isEmpty) return CvResult.empty;
+    if (input.framePaths.isEmpty) return CvResult.empty;
+
+    // Sample evenly distributed frames if there are too many.
+    final total = input.framePaths.length;
+    final paths = total <= _maxFrames
+        ? input.framePaths
+        : List.generate(
+            _maxFrames,
+            (i) => input.framePaths[(i * total ~/ _maxFrames)],
+          );
 
     final stripeDetector = StripeDetector(config);
     final anomalyDetector = AnomalyDetector(config);
 
     final frameResults = <CvFrameResult>[];
-    int imageWidth = 1, imageHeight = 1;
+    int originalWidth = 1, originalHeight = 1;
 
-    for (var i = 0; i < paths.length; i++) {
-      final path = paths[i];
+    for (final path in paths) {
       try {
         final bytes = await File(path).readAsBytes();
         final decoded = img.decodeImage(bytes);
         if (decoded == null) continue;
 
-        imageWidth = decoded.width;
-        imageHeight = decoded.height;
+        originalWidth = decoded.width;
+        originalHeight = decoded.height;
 
-        // Convert to grayscale.
-        final gray = img.grayscale(decoded);
+        // Downscale for faster processing — stripe detection works fine at 480px.
+        final scale = min(1.0, _maxProcessWidth / decoded.width);
+        final working = scale < 1.0
+            ? img.copyResize(
+                decoded,
+                width: (decoded.width * scale).round(),
+                height: (decoded.height * scale).round(),
+              )
+            : decoded;
 
-        // Detect stripe centerlines.
+        final gray = img.grayscale(working);
         final centerlines = stripeDetector.detect(gray);
 
-        // Detect anomalies.
-        final result = anomalyDetector.detect(
+        final anomalyResult = anomalyDetector.detect(
           centerlines,
-          imageWidth,
-          imageHeight,
+          gray.width,
+          gray.height,
         );
 
         frameResults.add(CvFrameResult(
           framePath: path,
+          imageWidth: gray.width,
+          imageHeight: gray.height,
           centerlines: centerlines,
-          anomalyPoints: result.points,
+          anomalyPoints: anomalyResult.points,
         ));
       } catch (_) {
-        // Skip corrupt frames.
+        // Skip corrupt or unreadable frames.
       }
     }
 
     if (frameResults.isEmpty) return CvResult.empty;
 
-    // Aggregate across frames.
     final candidates = TemporalAggregator(config).aggregate(
       frameResults,
-      imageWidth,
-      imageHeight,
+      frameResults.first.imageWidth,
+      frameResults.first.imageHeight,
     );
 
     final qualityScore = _computeQuality(frameResults, paths.length);
@@ -84,13 +101,9 @@ class CvPipeline {
     );
   }
 
-  static double _computeQuality(
-      List<CvFrameResult> frames, int totalFrames) {
+  static double _computeQuality(List<CvFrameResult> frames, int totalFrames) {
     if (frames.isEmpty) return 0;
-
-    // Quality = fraction of frames with detected stripes.
-    final framesWithStripes =
-        frames.where((f) => f.centerlines.isNotEmpty).length;
-    return (framesWithStripes / totalFrames).clamp(0.0, 1.0);
+    final withStripes = frames.where((f) => f.centerlines.isNotEmpty).length;
+    return (withStripes / totalFrames).clamp(0.0, 1.0);
   }
 }

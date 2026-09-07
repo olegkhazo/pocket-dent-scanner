@@ -148,7 +148,11 @@ class _DebugLabScreenState extends State<DebugLabScreen> {
                 const Center(child: CircularProgressIndicator()),
               if (currentCvFrame != null && _layer == _DebugLayer.stripes)
                 CustomPaint(
-                  painter: _StripePainter(currentCvFrame.centerlines),
+                  painter: _StripePainter(
+                    currentCvFrame.centerlines,
+                    currentCvFrame.imageWidth,
+                    currentCvFrame.imageHeight,
+                  ),
                 ),
               if (currentCvFrame != null && _layer == _DebugLayer.anomalies)
                 CustomPaint(
@@ -225,14 +229,17 @@ class _DebugLabScreenState extends State<DebugLabScreen> {
 
 class _StripePainter extends CustomPainter {
   final List<List<double>> centerlines;
+  final int imageWidth;
+  final int imageHeight;
 
-  _StripePainter(this.centerlines);
+  _StripePainter(this.centerlines, this.imageWidth, this.imageHeight);
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (imageWidth == 0 || imageHeight == 0) return;
     final paint = Paint()
-      ..color = Colors.cyanAccent.withValues(alpha: 0.7)
-      ..strokeWidth = 1;
+      ..color = Colors.cyanAccent.withValues(alpha: 0.8)
+      ..strokeWidth = 1.5;
 
     for (final track in centerlines) {
       Offset? prev;
@@ -242,8 +249,8 @@ class _StripePainter extends CustomPainter {
           continue;
         }
         final pt = Offset(
-          track[y] / track.length * size.width,
-          y / track.length * size.height,
+          track[y] / imageWidth * size.width,
+          y / imageHeight * size.height,
         );
         if (prev != null) canvas.drawLine(prev, pt, paint);
         prev = pt;
@@ -252,7 +259,10 @@ class _StripePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_StripePainter old) => old.centerlines != centerlines;
+  bool shouldRepaint(_StripePainter old) =>
+      old.centerlines != centerlines ||
+      old.imageWidth != imageWidth ||
+      old.imageHeight != imageHeight;
 }
 
 class _AnomalyPainter extends CustomPainter {

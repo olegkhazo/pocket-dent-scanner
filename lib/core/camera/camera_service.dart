@@ -12,6 +12,7 @@ class CameraService {
   final List<String> _capturedPaths = [];
   String? _sessionDir;
   bool _isCapturing = false;
+  bool _captureBusy = false;
 
   bool get isInitialized => _controller?.value.isInitialized ?? false;
   bool get isCapturing => _isCapturing;
@@ -50,8 +51,9 @@ class CameraService {
     final dir = Directory(sessionDir);
     await dir.create(recursive: true);
 
-    _captureTimer = Timer.periodic(const Duration(milliseconds: 200), (_) async {
-      if (!_isCapturing || _controller == null) return;
+    _captureTimer = Timer.periodic(const Duration(milliseconds: 250), (_) async {
+      if (!_isCapturing || _controller == null || _captureBusy) return;
+      _captureBusy = true;
       try {
         final xfile = await _controller!.takePicture();
         final index = _capturedPaths.length.toString().padLeft(4, '0');
@@ -59,7 +61,9 @@ class CameraService {
         await File(xfile.path).copy(dest);
         _capturedPaths.add(dest);
       } catch (_) {
-        // Skip frames that fail (e.g. if camera is busy).
+        // Skip frames that fail.
+      } finally {
+        _captureBusy = false;
       }
     });
   }
