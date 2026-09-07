@@ -5,11 +5,25 @@ import 'package:go_router/go_router.dart';
 import '../../core/light/light_pattern.dart';
 import 'app_settings.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load persisted settings when screen opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(appSettingsProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
     final notifier = ref.read(appSettingsProvider.notifier);
 
