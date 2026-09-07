@@ -59,7 +59,7 @@ class StripeDetector {
   List<int> _localMaxima(List<double> row) {
     final maxima = <int>[];
     for (var i = 1; i < row.length - 1; i++) {
-      if (row[i] > row[i - 1] && row[i] > row[i + 1] && row[i] > 0.3) {
+      if (row[i] > row[i - 1] && row[i] > row[i + 1] && row[i] > 0.1) {
         maxima.add(i);
       }
     }

@@ -19,7 +19,7 @@ class CvPipelineInput {
   const CvPipelineInput({
     required this.framePaths,
     required this.config,
-    this.maxFrames = 15,
+    this.maxFrames = 30,
     this.processWidth = 480,
   });
 }

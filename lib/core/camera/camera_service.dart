@@ -51,7 +51,7 @@ class CameraService {
     final dir = Directory(sessionDir);
     await dir.create(recursive: true);
 
-    _captureTimer = Timer.periodic(const Duration(milliseconds: 250), (_) async {
+    _captureTimer = Timer.periodic(const Duration(milliseconds: 150), (_) async {
       if (!_isCapturing || _controller == null || _captureBusy) return;
       _captureBusy = true;
       try {

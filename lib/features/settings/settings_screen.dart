@@ -71,11 +71,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 16),
           _SectionHeader('Developer'),
           _SliderTile(
-            label: 'Anomaly threshold',
+            label: 'Anomaly threshold (px)',
             value: settings.anomalyThreshold,
-            min: 0.05,
-            max: 1.0,
-            displayValue: settings.anomalyThreshold.toStringAsFixed(2),
+            min: 1.0,
+            max: 20.0,
+            displayValue: '${settings.anomalyThreshold.toStringAsFixed(1)}px',
             onChanged: (v) =>
                 notifier.update((s) => s.copyWith(anomalyThreshold: v)),
           ),

@@ -48,14 +48,16 @@ class AnomalyDetector {
         final expected = coeffs[0] + coeffs[1] * y + coeffs[2] * y * y;
         final deviation = (actual - expected).abs();
 
-        if (deviation > config.anomalyThreshold * imageWidth) {
+        // anomalyThreshold is in pixels (not fraction of imageWidth).
+        // Real dent deviations are 3–20px; default threshold = 4px.
+        if (deviation > config.anomalyThreshold) {
           final nx = actual / imageWidth;
           final ny = y / imageHeight;
           points.add(Offset(nx, ny));
           regions.add(AnomalyRegion(
             normalizedX: nx,
             normalizedY: ny,
-            magnitude: deviation / imageWidth,
+            magnitude: deviation,
           ));
         }
       }

@@ -13,11 +13,12 @@ abstract class CvConfig with _$CvConfig {
     @Default(20) int minStripeLength,
     @Default(5) int maxStripeGap,
     @Default(3) int lineSmoothing,
-    @Default(0.3) double anomalyThreshold,
+    // Pixels of deviation from smooth baseline — 4px ≈ small dent at 480px width.
+    @Default(4.0) double anomalyThreshold,
     @Default(3) int minSupportingStripes,
-    @Default(3) int minSupportingFrames,
+    @Default(2) int minSupportingFrames,
     @Default(15) int candidateMergeRadius,
-    @Default(30.0) double maxCameraMotion,
+    @Default(0.15) double maxCameraMotion,
   }) = _CvConfig;
 
   factory CvConfig.fromJson(Map<String, dynamic> json) =>

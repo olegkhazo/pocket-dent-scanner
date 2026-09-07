@@ -16,9 +16,9 @@ extension ProcessingQualitySettings on ProcessingQuality {
       };
 
   int get maxFrames => switch (this) {
-        ProcessingQuality.fast => 8,
-        ProcessingQuality.balanced => 15,
-        ProcessingQuality.high => 25,
+        ProcessingQuality.fast => 15,
+        ProcessingQuality.balanced => 30,
+        ProcessingQuality.high => 60,
       };
 
   int get processWidth => switch (this) {
@@ -42,7 +42,7 @@ class AppSettings {
     this.defaultPatternType = LightPatternType.verticalStripes,
     this.keepDebugFrames = true,
     this.processingQuality = ProcessingQuality.balanced,
-    this.anomalyThreshold = 0.3,
+    this.anomalyThreshold = 4.0,
     this.minSupportingFrames = 3,
     this.cvDebugMode = false,
   });
